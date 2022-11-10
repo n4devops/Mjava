@@ -1,0 +1,51 @@
+node{
+ // Get Artifcatory Server Instace Detials
+    def server = Artifactory.server "01"
+    def buildInfo = Artifactory.newBuildInfo()
+    
+        stage('Git CheckOut') {
+            git branch: 'main', url: 'https://github.com/n4devops/Mjava.git'
+           }    
+            stage('MAVEN - Clean') {
+           sh 'mvn clean'
+        }
+        
+        stage('MAVEN - Compile') {
+          sh 'mvn compile'
+        } 
+        
+        stage('MAVEN - Test') {
+          sh 'mvn test'
+        } 
+        
+        stage('MAVEN - Package') {
+         sh 'mvn package'
+        } 
+        stage('Publish Test Results') {
+         junit 'target/surefire-reports/*.xml'   
+        } 
+
+        stage('Build Management') {
+		def uploadSpec = """{ 
+			"files": [
+			{
+			"pattern": "**/*.jar",
+			"target": "Mavenrepo"
+			}
+		]
+
+	}"""
+	
+	server.upload spec: uploadSpec, buildInfo: buildInfo
+       }
+
+       stage('Publish Build Info'){
+   server.publishBuildInfo buildInfo
+}
+        
+       stage('Archive') {
+         archiveArtifacts artifacts: 'target/*.jar', followSymlinks: false    
+        }    
+        
+    
+}
